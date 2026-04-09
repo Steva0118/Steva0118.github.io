@@ -4,461 +4,977 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>期货仓位计算器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:       #001e62;
+      --navy-deep:  #001245;
+      --navy-mid:   #0a2d7a;
+      --navy-light: #0e3a9e;
+      --gold:       #b8982a;
+      --gold-light: #d4af37;
+      --cream:      #f3f0e8;
+      --off-white:  #f8f7f4;
+      --white:      #ffffff;
+      --gray-100:   #f3f3f3;
+      --gray-200:   #e8e8e8;
+      --gray-300:   #d0d0d0;
+      --gray-500:   #8a8a8a;
+      --gray-700:   #4a4a4a;
+      --green:      #1a6b3c;
+      --green-light:#e8f4ee;
+      --red:        #9b1c1c;
+      --red-light:  #fdf2f2;
+      --amber:      #92400e;
+      --amber-light:#fffbeb;
+      --font-serif: 'Playfair Display', Georgia, serif;
+      --font-sans:  'Montserrat', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      --shadow-sm:  0 1px 4px rgba(0,30,98,0.06);
+      --shadow-md:  0 4px 20px rgba(0,30,98,0.10);
+      --shadow-lg:  0 12px 40px rgba(0,30,98,0.14);
+      --radius:     2px;
+      --radius-lg:  4px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-      background: #0f1117;
-      color: #e2e8f0;
+      font-family: var(--font-sans);
+      background: var(--off-white);
+      color: var(--navy);
       min-height: 100vh;
-      padding: 24px 16px;
-    }
-
-    .container { max-width: 860px; margin: 0 auto; }
-
-    h1 {
-      text-align: center;
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #f0f4ff;
-      margin-bottom: 6px;
-      letter-spacing: 1px;
-    }
-
-    .subtitle {
-      text-align: center;
-      font-size: 0.82rem;
-      color: #64748b;
-      margin-bottom: 28px;
-    }
-
-    .card {
-      background: #1e2130;
-      border: 1px solid #2d3348;
-      border-radius: 14px;
-      padding: 24px 28px;
-      margin-bottom: 20px;
-    }
-
-    .card-title {
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #6c7a99;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
-      margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .card-title::before {
-      content: '';
-      display: inline-block;
-      width: 3px; height: 14px;
-      background: #4f8ef7;
-      border-radius: 2px;
-    }
-
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-
-    .field { display: flex; flex-direction: column; gap: 6px; }
-
-    label { font-size: 0.78rem; color: #94a3b8; font-weight: 500; }
-
-    input, select {
-      background: #131622;
-      border: 1px solid #2d3348;
-      border-radius: 8px;
-      color: #e2e8f0;
-      font-size: 0.95rem;
-      padding: 10px 14px;
-      outline: none;
-      transition: border-color 0.2s;
-      width: 100%;
-    }
-
-    input:focus, select:focus { border-color: #4f8ef7; }
-
-    /* 自动推算的输入框样式 */
-    input.auto-calc {
-      border-color: #4f8ef7;
-      border-style: dashed;
-      color: #4f8ef7;
-      background: rgba(79,142,247,0.06);
-      cursor: default;
-    }
-
-    /* 保本推算提示 */
-    input.breakeven-calc {
-      border-color: #22c55e;
-      border-style: dashed;
-      color: #22c55e;
-      background: rgba(34,197,94,0.06);
-      cursor: default;
-    }
-
-    .hint { font-size: 0.7rem; color: #475569; }
-    .hint.auto { color: #4f8ef7; opacity: 0.8; }
-    .hint.breakeven { color: #22c55e; opacity: 0.8; }
-
-    .direction-group { display: flex; gap: 10px; }
-
-    .direction-btn {
-      flex: 1; padding: 10px;
-      border-radius: 8px;
-      border: 1.5px solid #2d3348;
-      background: #131622;
-      color: #64748b;
-      font-size: 0.92rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.18s;
-      text-align: center;
-    }
-
-    .direction-btn.long.active  { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,0.08); }
-    .direction-btn.short.active { border-color: #f87171; color: #f87171; background: rgba(248,113,113,0.08); }
-
-    /* 减持行：序号 | 价格 | 比例 | 剩余 | 删除 */
-    .reduce-row {
-      display: grid;
-      grid-template-columns: 28px 1fr 1fr 1fr 32px;
-      gap: 10px;
-      align-items: end;
-      margin-bottom: 14px;
-      padding: 12px 12px 12px 10px;
-      background: #181c28;
-      border: 1px solid #252a3a;
-      border-radius: 10px;
-    }
-
-    .row-num {
-      font-size: 0.75rem;
-      color: #4f8ef7;
-      font-weight: 700;
-      text-align: center;
-      padding-bottom: 11px;
-    }
-
-    /* 输入字段内联提示 */
-    .input-wrap {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .input-wrap label { font-size: 0.72rem; color: #64748b; }
-
-    .auto-badge {
-      font-size: 0.62rem;
-      padding: 1px 5px;
-      border-radius: 3px;
-      font-weight: 700;
-      display: inline-block;
-      margin-left: 4px;
-    }
-
-    .auto-badge.computed  { background: rgba(79,142,247,0.2);  color: #4f8ef7; }
-    .auto-badge.breakeven { background: rgba(34,197,94,0.2);   color: #22c55e; }
-    .auto-badge.manual    { background: rgba(148,163,184,0.15); color: #94a3b8; }
-
-    .btn-remove {
-      background: transparent;
-      border: 1px solid #2d3348;
-      border-radius: 6px;
-      color: #f87171;
-      font-size: 1rem;
-      cursor: pointer;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s;
-      margin-bottom: 0;
-      align-self: end;
-    }
-    .btn-remove:hover { background: rgba(248,113,113,0.12); }
-
-    .btn-add {
-      background: transparent;
-      border: 1.5px dashed #2d3348;
-      border-radius: 8px;
-      color: #4f8ef7;
-      font-size: 0.84rem;
-      cursor: pointer;
-      padding: 10px;
-      width: 100%;
-      transition: all 0.15s;
-    }
-    .btn-add:hover { border-color: #4f8ef7; background: rgba(79,142,247,0.06); }
-
-    /* 列标题 */
-    .reduce-header {
-      display: grid;
-      grid-template-columns: 28px 1fr 1fr 1fr 32px;
-      gap: 10px;
-      padding: 0 10px 6px 10px;
-      margin-bottom: 4px;
-    }
-    .reduce-header span {
-      font-size: 0.7rem;
-      color: #475569;
-      text-align: center;
-    }
-
-    /* 说明条 */
-    .tip-bar {
-      background: rgba(79,142,247,0.07);
-      border: 1px solid rgba(79,142,247,0.2);
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 0.76rem;
-      color: #7da8f5;
-      margin-bottom: 16px;
       line-height: 1.6;
     }
 
-    .btn-calc {
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, #4f8ef7, #6366f1);
-      border: none;
-      border-radius: 10px;
-      color: #fff;
+    /* ── Header ─────────────────────────────────── */
+    .site-header {
+      background: var(--navy);
+      padding: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+    }
+
+    .header-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+
+    .header-logo-mark {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--gold-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .header-logo-mark span {
+      font-family: var(--font-serif);
       font-size: 1rem;
+      color: var(--gold-light);
       font-weight: 700;
-      cursor: pointer;
-      letter-spacing: 1px;
-      transition: opacity 0.18s, transform 0.12s;
+      line-height: 1;
     }
-    .btn-calc:hover  { opacity: 0.9; transform: translateY(-1px); }
-    .btn-calc:active { transform: translateY(0); }
 
-    #result-section { display: none; }
+    .header-title-group { display: flex; flex-direction: column; justify-content: center; }
 
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
+    .header-title {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--white);
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+    }
+
+    .header-subtitle {
+      font-size: 0.62rem;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .header-accent {
+      width: 3px;
+      height: 100%;
+      background: var(--gold-light);
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+
+    /* ── Hero ────────────────────────────────────── */
+    .hero {
+      background: var(--navy);
+      padding: 56px 24px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 400px; height: 400px;
+      border: 1px solid rgba(184,152,42,0.15);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; left: -60px;
+      width: 280px; height: 280px;
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-eyebrow {
+      display: flex;
+      align-items: center;
       gap: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
-    .stat-box {
-      background: #131622;
-      border: 1px solid #2d3348;
-      border-radius: 10px;
-      padding: 14px 16px;
+    .hero-eyebrow-line {
+      width: 40px;
+      height: 1px;
+      background: var(--gold-light);
+    }
+
+    .hero-eyebrow-text {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--gold-light);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .hero-heading {
+      font-family: var(--font-serif);
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 400;
+      color: var(--white);
+      line-height: 1.25;
+      margin-bottom: 14px;
+      max-width: 600px;
+    }
+
+    .hero-heading em {
+      font-style: italic;
+      color: var(--gold-light);
+    }
+
+    .hero-desc {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.55);
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      max-width: 480px;
+    }
+
+    /* ── Main Layout ─────────────────────────────── */
+    .main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    /* ── Section Title ───────────────────────────── */
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .section-title-text {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .section-title-line {
+      flex: 1;
+      height: 1px;
+      background: var(--gray-200);
+    }
+
+    .section-title-num {
+      width: 28px; height: 28px;
+      border: 1.5px solid var(--navy);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--navy);
+      flex-shrink: 0;
+    }
+
+    /* ── Panel ───────────────────────────────────── */
+    .panel {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      padding: 32px 36px;
+      margin-bottom: 24px;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--transition);
+    }
+
+    .panel:hover { box-shadow: var(--shadow-md); }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--navy);
+    }
+
+    /* ── Grid ────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+    /* ── Field ───────────────────────────────────── */
+    .field { display: flex; flex-direction: column; gap: 8px; }
+
+    .field-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .field-input {
+      background: var(--white);
+      border: 1.5px solid var(--gray-300);
+      color: var(--navy);
+      font-family: var(--font-sans);
+      font-size: 0.92rem;
+      font-weight: 500;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      width: 100%;
+      border-radius: var(--radius);
+      -webkit-appearance: none;
+    }
+
+    .field-input::placeholder { color: var(--gray-300); font-weight: 400; }
+
+    .field-input:focus {
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px rgba(0,30,98,0.07);
+    }
+
+    /* auto-calc styles */
+    .field-input.auto-calc {
+      border-color: #2563eb;
+      border-style: dashed;
+      color: #1d4ed8;
+      background: #eff6ff;
+    }
+
+    .field-input.breakeven-calc {
+      border-color: var(--green);
+      border-style: dashed;
+      color: var(--green);
+      background: var(--green-light);
+    }
+
+    .field-hint {
+      font-size: 0.68rem;
+      color: var(--gray-500);
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    .field-hint.auto    { color: #2563eb; }
+    .field-hint.breakeven { color: var(--green); }
+
+    /* ── Direction Buttons ───────────────────────── */
+    .direction-group { display: flex; gap: 0; border: 1.5px solid var(--gray-300); }
+
+    .direction-btn {
+      flex: 1;
+      padding: 11px 10px;
+      border: none;
+      background: var(--white);
+      color: var(--gray-500);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .direction-btn:first-child { border-right: 1px solid var(--gray-300); }
+
+    .direction-btn.long.active {
+      background: var(--green);
+      color: var(--white);
+      border-color: var(--green);
+    }
+
+    .direction-btn.short.active {
+      background: var(--red);
+      color: var(--white);
+      border-color: var(--red);
+    }
+
+    /* ── Tip Bar ─────────────────────────────────── */
+    .tip-bar {
+      background: rgba(0,30,98,0.04);
+      border-left: 3px solid var(--navy);
+      padding: 12px 16px;
+      font-size: 0.75rem;
+      color: var(--navy);
+      line-height: 1.8;
+      margin-bottom: 24px;
+    }
+
+    .tip-bar strong { font-weight: 700; }
+
+    /* ── Reduce Row ──────────────────────────────── */
+    .reduce-table-header {
+      display: grid;
+      grid-template-columns: 28px 1fr 1fr 1fr 36px;
+      gap: 12px;
+      padding: 0 0 10px 0;
+      border-bottom: 1px solid var(--gray-200);
+      margin-bottom: 16px;
+    }
+
+    .reduce-table-header span {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--gray-500);
+      letter-spacing: 1px;
+      text-transform: uppercase;
       text-align: center;
     }
 
-    .stat-label { font-size: 0.7rem; color: #64748b; margin-bottom: 6px; }
-    .stat-value { font-size: 1.15rem; font-weight: 700; }
-    .stat-value.profit  { color: #22c55e; }
-    .stat-value.loss    { color: #f87171; }
-    .stat-value.neutral { color: #f0f4ff; }
-    .stat-value.warn    { color: #fbbf24; }
+    .reduce-row {
+      display: grid;
+      grid-template-columns: 28px 1fr 1fr 1fr 36px;
+      gap: 12px;
+      align-items: end;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--gray-100);
+      transition: background var(--transition);
+    }
 
-    .timeline { position: relative; padding-left: 28px; }
+    .reduce-row:hover { background: rgba(0,30,98,0.02); margin: 0 -8px; padding: 16px 8px; }
+
+    .row-num {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--gray-300);
+      text-align: center;
+      padding-bottom: 12px;
+      font-family: var(--font-serif);
+    }
+
+    .input-wrap { display: flex; flex-direction: column; gap: 5px; }
+
+    .input-wrap .lbl {
+      font-size: 0.62rem;
+      font-weight: 600;
+      color: var(--gray-500);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .badge {
+      font-size: 0.55rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .badge.manual   { background: var(--gray-100); color: var(--gray-500); }
+    .badge.computed { background: #dbeafe; color: #1d4ed8; }
+    .badge.breakeven{ background: #d1fae5; color: var(--green); }
+
+    .btn-remove {
+      background: transparent;
+      border: 1.5px solid var(--gray-200);
+      color: var(--gray-500);
+      font-size: 0.8rem;
+      cursor: pointer;
+      height: 40px;
+      width: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      flex-shrink: 0;
+      border-radius: var(--radius);
+    }
+
+    .btn-remove:hover {
+      border-color: var(--red);
+      color: var(--red);
+      background: var(--red-light);
+    }
+
+    .btn-add {
+      background: transparent;
+      border: 1.5px dashed var(--gray-300);
+      color: var(--navy);
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 12px;
+      width: 100%;
+      transition: all var(--transition);
+      letter-spacing: 0.5px;
+      margin-top: 8px;
+      border-radius: var(--radius);
+    }
+
+    .btn-add:hover {
+      border-color: var(--navy);
+      background: rgba(0,30,98,0.03);
+    }
+
+    /* ── Calculate Button ────────────────────────── */
+    .btn-calc-wrap { margin-top: 8px; }
+
+    .btn-calc {
+      width: 100%;
+      padding: 16px;
+      background: var(--navy);
+      border: none;
+      color: var(--white);
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+    }
+
+    .btn-calc::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 0; height: 2px;
+      background: var(--gold-light);
+      transition: width 0.4s ease;
+    }
+
+    .btn-calc:hover {
+      background: var(--navy-deep);
+    }
+
+    .btn-calc:hover::after { width: 100%; }
+    .btn-calc:active { transform: scale(0.995); }
+
+    /* ── Error ───────────────────────────────────── */
+    .error-msg {
+      display: none;
+      background: var(--red-light);
+      border-left: 3px solid var(--red);
+      padding: 12px 16px;
+      font-size: 0.78rem;
+      color: var(--red);
+      margin-top: 16px;
+      font-weight: 500;
+      animation: slideIn 0.2s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Result Section ──────────────────────────── */
+    #result-section {
+      display: none;
+      animation: fadeUp 0.4s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Summary Stats ───────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border: 1.5px solid var(--gray-200);
+    }
+
+    .stat-box {
+      padding: 20px 18px;
+      border-right: 1px solid var(--gray-200);
+      position: relative;
+    }
+
+    .stat-box:last-child { border-right: none; }
+
+    .stat-box::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 18px; right: 18px;
+      height: 2px;
+      background: var(--navy);
+      transform: scaleX(0);
+      transition: transform var(--transition);
+    }
+
+    .stat-box:hover::after { transform: scaleX(1); }
+
+    .stat-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--gray-500);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: var(--font-serif);
+      font-size: 1.4rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .stat-value.profit  { color: var(--green); }
+    .stat-value.loss    { color: var(--red); }
+    .stat-value.neutral { color: var(--navy); }
+    .stat-value.warn    { color: var(--amber); }
+
+    /* ── Breakeven Banner ────────────────────────── */
+    .breakeven-banner {
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .breakeven-banner.safe {
+      background: var(--green-light);
+      border-left: 3px solid var(--green);
+    }
+
+    .breakeven-banner.danger {
+      background: var(--red-light);
+      border-left: 3px solid var(--red);
+    }
+
+    .breakeven-banner .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+    .breakeven-banner.safe .text  { color: var(--green); }
+    .breakeven-banner.danger .text{ color: var(--red); }
+
+    .breakeven-banner .text { font-size: 0.82rem; line-height: 1.6; font-weight: 500; }
+    .breakeven-banner .text strong { font-weight: 700; }
+
+    .breakeven-detail {
+      font-size: 0.78rem;
+      color: var(--gray-700);
+      line-height: 2;
+    }
+
+    .breakeven-detail strong { color: var(--navy); font-weight: 600; }
+
+    /* ── Timeline ────────────────────────────────── */
+    .timeline {
+      position: relative;
+      padding-left: 32px;
+    }
+
     .timeline::before {
       content: '';
       position: absolute;
-      left: 9px; top: 0; bottom: 0;
-      width: 2px;
-      background: #2d3348;
+      left: 8px; top: 20px; bottom: 20px;
+      width: 1px;
+      background: var(--gray-200);
     }
 
-    .tl-item { position: relative; margin-bottom: 14px; }
+    .tl-item {
+      position: relative;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateX(-8px);
+      animation: tlIn 0.35s ease forwards;
+    }
+
+    @keyframes tlIn {
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .tl-item:nth-child(1) { animation-delay: 0.05s; }
+    .tl-item:nth-child(2) { animation-delay: 0.12s; }
+    .tl-item:nth-child(3) { animation-delay: 0.19s; }
+    .tl-item:nth-child(4) { animation-delay: 0.26s; }
+    .tl-item:nth-child(5) { animation-delay: 0.33s; }
+    .tl-item:nth-child(6) { animation-delay: 0.40s; }
 
     .tl-dot {
       position: absolute;
-      left: -23px; top: 14px;
+      left: -27px; top: 18px;
       width: 10px; height: 10px;
-      border-radius: 50%;
-      border: 2px solid #4f8ef7;
-      background: #1e2130;
+      border: 2px solid var(--gray-300);
+      background: var(--white);
     }
-    .tl-dot.open   { border-color: #4f8ef7; background: #4f8ef7; }
-    .tl-dot.reduce { border-color: #fbbf24; background: #fbbf24; }
-    .tl-dot.sl     { border-color: #f87171; background: #f87171; }
+
+    .tl-dot.open   { border-color: var(--navy);  background: var(--navy); }
+    .tl-dot.reduce { border-color: var(--amber);  background: var(--amber); }
+    .tl-dot.sl     { border-color: var(--red);    background: var(--red); }
 
     .tl-card {
-      background: #131622;
-      border: 1px solid #2d3348;
-      border-radius: 10px;
-      padding: 14px 18px;
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      padding: 16px 20px;
+      transition: box-shadow var(--transition), border-color var(--transition);
+    }
+
+    .tl-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--gray-300);
     }
 
     .tl-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--gray-100);
     }
 
     .tl-tag {
-      font-size: 0.72rem;
+      font-size: 0.62rem;
       font-weight: 700;
       padding: 3px 8px;
-      border-radius: 4px;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
-    .tl-tag.open   { background: rgba(79,142,247,0.15);  color: #4f8ef7; }
-    .tl-tag.reduce { background: rgba(251,191,36,0.12);  color: #fbbf24; }
-    .tl-tag.sl     { background: rgba(248,113,113,0.12); color: #f87171; }
 
-    .tl-price { font-size: 1rem; font-weight: 700; color: #f0f4ff; }
+    .tl-tag.open   { background: rgba(0,30,98,0.08);   color: var(--navy); }
+    .tl-tag.reduce { background: var(--amber-light);    color: var(--amber); }
+    .tl-tag.sl     { background: var(--red-light);      color: var(--red); }
+
+    .tl-price {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
 
     .tl-detail-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .tl-detail { font-size: 0.78rem; }
-    .tl-detail span:first-child { color: #64748b; display: block; margin-bottom: 2px; }
-    .tl-detail span:last-child  { color: #e2e8f0; font-weight: 600; }
-
-    .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-
-    .scenario-box { border-radius: 10px; padding: 16px 18px; }
-    .scenario-box.worst { background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.25); }
-    .scenario-box.best  { background: rgba(34,197,94,0.07);   border: 1px solid rgba(34,197,94,0.25); }
-
-    .scenario-title { font-size: 0.75rem; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.5px; }
-    .scenario-box.worst .scenario-title { color: #f87171; }
-    .scenario-box.best  .scenario-title { color: #22c55e; }
-
-    .scenario-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; }
-    .scenario-row span:first-child { color: #64748b; }
-    .scenario-row span:last-child  { font-weight: 600; color: #e2e8f0; }
-    .scenario-row.total span:last-child { font-size: 0.95rem; }
-    .scenario-box.worst .scenario-row.total span:last-child { color: #f87171; }
-    .scenario-box.best  .scenario-row.total span:last-child { color: #22c55e; }
-
-    .breakeven-banner {
-      border-radius: 10px;
-      padding: 14px 18px;
-      font-size: 0.84rem;
-      display: flex;
-      align-items: flex-start;
       gap: 10px;
-      margin-bottom: 16px;
     }
-    .breakeven-banner.safe   { background: rgba(34,197,94,0.08);  border: 1px solid rgba(34,197,94,0.25);  color: #22c55e; }
-    .breakeven-banner.danger { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); color: #f87171; }
-    .breakeven-banner .icon  { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
 
-    .error-msg {
-      color: #f87171;
+    .tl-detail { font-size: 0.75rem; }
+
+    .tl-detail .dl { color: var(--gray-500); margin-bottom: 2px; font-weight: 500; font-size: 0.68rem; letter-spacing: 0.5px; }
+    .tl-detail .dv { color: var(--navy); font-weight: 600; }
+
+    /* ── Scenario ────────────────────────────────── */
+    .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .scenario-box { padding: 20px 22px; }
+
+    .scenario-box.worst {
+      background: var(--red-light);
+      border: 1px solid rgba(155,28,28,0.2);
+      border-left: 3px solid var(--red);
+    }
+
+    .scenario-box.best {
+      background: var(--green-light);
+      border: 1px solid rgba(26,107,60,0.2);
+      border-left: 3px solid var(--green);
+    }
+
+    .scenario-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(0,0,0,0.07);
+    }
+
+    .scenario-box.worst .scenario-title { color: var(--red); }
+    .scenario-box.best  .scenario-title { color: var(--green); }
+
+    .scenario-row {
+      display: flex;
+      justify-content: space-between;
       font-size: 0.78rem;
-      margin-top: 16px;
-      text-align: center;
-      display: none;
+      margin-bottom: 6px;
     }
 
-    @media (max-width: 600px) {
-      .grid-2, .grid-3   { grid-template-columns: 1fr; }
-      .summary-grid       { grid-template-columns: 1fr 1fr; }
-      .scenario-grid      { grid-template-columns: 1fr; }
-      .reduce-row         { grid-template-columns: 24px 1fr 1fr 1fr 28px; gap: 6px; }
-      .reduce-header      { grid-template-columns: 24px 1fr 1fr 1fr 28px; gap: 6px; }
-      .tl-detail-grid     { grid-template-columns: 1fr 1fr; }
+    .scenario-row span:first-child { color: var(--gray-500); }
+    .scenario-row span:last-child  { font-weight: 600; color: var(--navy); }
+
+    .scenario-row.total {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .scenario-row.total span:last-child { font-family: var(--font-serif); font-size: 1.05rem; }
+    .scenario-box.worst .scenario-row.total span:last-child { color: var(--red); }
+    .scenario-box.best  .scenario-row.total span:last-child { color: var(--green); }
+
+    /* ── Footer ──────────────────────────────────── */
+    .site-footer {
+      background: var(--navy);
+      padding: 24px;
+      text-align: center;
+      margin-top: 0;
+    }
+
+    .site-footer p {
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ── Divider ─────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--gray-200);
+      margin: 32px 0;
+    }
+
+    /* ── Responsive ──────────────────────────────── */
+    @media (max-width: 680px) {
+      .panel { padding: 20px 18px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .summary-grid    { grid-template-columns: 1fr 1fr; }
+      .scenario-grid   { grid-template-columns: 1fr; }
+      .reduce-row      { grid-template-columns: 20px 1fr 1fr 1fr 32px; gap: 8px; }
+      .reduce-table-header { grid-template-columns: 20px 1fr 1fr 1fr 32px; gap: 8px; }
+      .tl-detail-grid  { grid-template-columns: 1fr 1fr; }
+      .hero { padding: 36px 18px 32px; }
+      .hero-heading { font-size: 1.6rem; }
     }
   </style>
 </head>
 <body>
-<div class="container">
-  <h1>📊 期货仓位计算器</h1>
-  <p class="subtitle">输入开仓参数与减持计划，实时推演仓位变化与盈亏结果</p>
 
-  <!-- 基本参数 -->
-  <div class="card">
-    <div class="card-title">基本参数</div>
-    <div class="grid-3" style="margin-bottom:16px">
+<!-- Site Header -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <div class="header-logo-mark"><span>F</span></div>
+      <div class="header-title-group">
+        <div class="header-title">期货仓位计算器</div>
+        <div class="header-subtitle">Futures Position Calculator</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">
+      <div class="hero-eyebrow-line"></div>
+      <span class="hero-eyebrow-text">Professional Trading Tool</span>
+    </div>
+    <h1 class="hero-heading">精准推演 <em>仓位</em> 与盈亏</h1>
+    <p class="hero-desc">输入开仓参数与减持计划，实时推演仓位变化、保本价格及极端场景盈亏</p>
+  </div>
+</section>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Section 1: Basic Params -->
+  <div class="section-title">
+    <div class="section-title-num">01</div>
+    <span class="section-title-text">基本参数</span>
+    <div class="section-title-line"></div>
+  </div>
+
+  <div class="panel">
+    <div class="grid-3" style="margin-bottom:20px">
       <div class="field">
-        <label>交易方向</label>
+        <label class="field-label">交易方向</label>
         <div class="direction-group">
-          <div class="direction-btn long active" id="btn-long" onclick="setDirection('long')">📈 做多</div>
-          <div class="direction-btn short" id="btn-short" onclick="setDirection('short')">📉 做空</div>
+          <button class="direction-btn long active" id="btn-long" onclick="setDirection('long')">▲ 做多</button>
+          <button class="direction-btn short" id="btn-short" onclick="setDirection('short')">▼ 做空</button>
         </div>
       </div>
       <div class="field">
-        <label>开仓价格</label>
-        <input type="number" id="openPrice" placeholder="如 2230" step="any" oninput="onBaseChange()"/>
+        <label class="field-label">开仓价格</label>
+        <input class="field-input" type="number" id="openPrice" placeholder="如 2230" step="any" oninput="onBaseChange()"/>
       </div>
       <div class="field">
-        <label>止损价格</label>
-        <input type="number" id="stopLoss" placeholder="如 2273" step="any" oninput="onBaseChange()"/>
-        <span class="hint" id="sl-hint">做空时止损价高于开仓价</span>
+        <label class="field-label">止损价格</label>
+        <input class="field-input" type="number" id="stopLoss" placeholder="如 2273" step="any" oninput="onBaseChange()"/>
+        <span class="field-hint" id="sl-hint">做空时止损价高于开仓价</span>
       </div>
     </div>
     <div class="grid-2">
       <div class="field">
-        <label>总仓位金额（$）</label>
-        <input type="number" id="totalPos" placeholder="如 100" step="any" value="100"/>
+        <label class="field-label">总仓位金额（$）</label>
+        <input class="field-input" type="number" id="totalPos" placeholder="如 100" step="any" value="100"/>
       </div>
       <div class="field">
-        <label>货币/合约名称（可选）</label>
-        <input type="text" id="symbol" placeholder="如 ETH、BTC、黄金"/>
+        <label class="field-label">货币 / 合约名称（可选）</label>
+        <input class="field-input" type="text" id="symbol" placeholder="如 ETH、BTC、黄金"/>
       </div>
     </div>
   </div>
 
-  <!-- 减持计划 -->
-  <div class="card">
-    <div class="card-title">减持计划</div>
+  <!-- Section 2: Reduce Plan -->
+  <div class="section-title">
+    <div class="section-title-num">02</div>
+    <span class="section-title-text">减持计划</span>
+    <div class="section-title-line"></div>
+  </div>
 
+  <div class="panel">
     <div class="tip-bar">
-      💡 <strong>价格</strong> 和 <strong>减持比例</strong> 只需填写其中一个，另一个会自动推算：
-      <br>· 填写<strong>减持比例</strong> → 自动计算出「保本价格」（绿色）
-      <br>· 填写<strong>减持价格</strong> → 自动计算出「对应比例」（蓝色）
-      <br>· 两者都填 → 以手动值为准，显示实际盈亏
+      <strong>价格</strong> 与 <strong>减持比例</strong> 只需填写其一，另一个将自动推算：<br>
+      · 填写 <strong>减持比例</strong> → 自动计算出「保本价格」&nbsp;&nbsp;
+      · 填写 <strong>减持价格</strong> → 自动计算出「保本所需最低比例」<br>
+      · 两者均填 → 以手动值为准，计算实际盈亏
     </div>
 
-    <div class="reduce-header">
+    <div class="reduce-table-header">
       <span></span>
       <span>减持价格</span>
       <span>减持比例（%）</span>
       <span>减持后剩余仓位</span>
       <span></span>
     </div>
+
     <div id="reduce-list"></div>
     <button class="btn-add" onclick="addReduceRow()">＋ 添加减持点位</button>
   </div>
 
   <div id="error-msg" class="error-msg"></div>
-  <button class="btn-calc" onclick="calculate()">开始计算 →</button>
 
-  <!-- 结果 -->
+  <div class="btn-calc-wrap">
+    <button class="btn-calc" onclick="calculate()">开始计算 →</button>
+  </div>
+
+  <!-- Result Section -->
   <div id="result-section">
-    <div class="card" style="margin-top:20px">
-      <div class="card-title">开仓概览</div>
+
+    <div class="divider"></div>
+
+    <!-- Section 3: Overview -->
+    <div class="section-title">
+      <div class="section-title-num">03</div>
+      <span class="section-title-text">开仓概览</span>
+      <div class="section-title-line"></div>
+    </div>
+
+    <div class="panel" style="padding: 0;">
       <div class="summary-grid" id="summary-grid"></div>
     </div>
-    <div class="card">
-      <div class="card-title">保本分析</div>
+
+    <!-- Section 4: Breakeven -->
+    <div class="section-title" style="margin-top:28px">
+      <div class="section-title-num">04</div>
+      <span class="section-title-text">保本分析</span>
+      <div class="section-title-line"></div>
+    </div>
+
+    <div class="panel">
       <div id="breakeven-info"></div>
     </div>
-    <div class="card">
-      <div class="card-title">仓位推演时间轴</div>
+
+    <!-- Section 5: Timeline -->
+    <div class="section-title">
+      <div class="section-title-num">05</div>
+      <span class="section-title-text">仓位推演时间轴</span>
+      <div class="section-title-line"></div>
+    </div>
+
+    <div class="panel">
       <div class="timeline" id="timeline"></div>
     </div>
-    <div class="card">
-      <div class="card-title">极端场景</div>
-      <div class="scenario-grid" id="scenario-grid"></div>
+
+    <!-- Section 6: Scenarios -->
+    <div class="section-title">
+      <div class="section-title-num">06</div>
+      <span class="section-title-text">极端场景</span>
+      <div class="section-title-line"></div>
     </div>
+
+    <div class="scenario-grid" id="scenario-grid"></div>
+
   </div>
-</div>
+</main>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <p>Futures Position Calculator &nbsp;·&nbsp; For Reference Only &nbsp;·&nbsp; Not Financial Advice</p>
+</footer>
 
 <script>
   let direction = 'long';
   let reduceRows = [];
 
-  // ─── 方向切换 ──────────────────────────────────────────
+  // ─── Direction ─────────────────────────────────
   function setDirection(d) {
     direction = d;
     document.getElementById('btn-long').classList.toggle('active', d === 'long');
@@ -468,15 +984,12 @@
     recomputeAllRows();
   }
 
-  // 基础参数变化时重新推算所有行
-  function onBaseChange() {
-    recomputeAllRows();
-  }
+  function onBaseChange() { recomputeAllRows(); }
 
-  // ─── 行管理 ────────────────────────────────────────────
+  // ─── Row Management ────────────────────────────
   function addReduceRow() {
     const id = Date.now() + Math.random();
-    reduceRows.push({ id, lastEdited: null }); // lastEdited: 'price'|'ratio'|null
+    reduceRows.push({ id, lastEdited: null });
     renderReduceRows();
   }
 
@@ -495,26 +1008,23 @@
       div.className = 'reduce-row';
       div.id = 'row-' + id;
       div.innerHTML = `
-        <div class="row-num">#${idx + 1}</div>
+        <div class="row-num">${idx + 1}</div>
 
         <div class="input-wrap">
-          <label>减持价格 <span class="auto-badge manual" id="badge-price-${id}">手动</span></label>
-          <input type="number" id="rp-${id}" placeholder="自动推算" step="any"
-            oninput="onPriceInput(${id})"/>
-          <span class="hint" id="hint-price-${id}"></span>
+          <div class="lbl">价格 <span class="badge manual" id="badge-price-${id}">手动</span></div>
+          <input class="field-input" type="number" id="rp-${id}" placeholder="自动推算" step="any" oninput="onPriceInput(${id})"/>
+          <span class="field-hint" id="hint-price-${id}"></span>
         </div>
 
         <div class="input-wrap">
-          <label>减持比例(%) <span class="auto-badge manual" id="badge-ratio-${id}">手动</span></label>
-          <input type="number" id="rr-${id}" placeholder="自动推算" min="0.01" max="99.99" step="any"
-            oninput="onRatioInput(${id})"/>
-          <span class="hint" id="hint-ratio-${id}"></span>
+          <div class="lbl">比例 % <span class="badge manual" id="badge-ratio-${id}">手动</span></div>
+          <input class="field-input" type="number" id="rr-${id}" placeholder="自动推算" min="0.01" max="99.99" step="any" oninput="onRatioInput(${id})"/>
+          <span class="field-hint" id="hint-ratio-${id}"></span>
         </div>
 
         <div class="input-wrap">
-          <label>减持后剩余仓位</label>
-          <input type="text" id="rem-${id}" placeholder="—" readonly
-            style="color:#fbbf24;cursor:default;background:#131622;border-color:#2d3348;"/>
+          <div class="lbl">减持后剩余</div>
+          <input class="field-input" type="text" id="rem-${id}" placeholder="—" readonly style="cursor:default;color:var(--amber);border-color:var(--gray-200);"/>
         </div>
 
         <button class="btn-remove" onclick="removeReduceRow(${id})" title="删除">✕</button>
@@ -524,18 +1034,15 @@
     recomputeAllRows();
   }
 
-  // ─── 输入事件 ──────────────────────────────────────────
+  // ─── Input Events ───────────────────────────────
   function onPriceInput(id) {
     const row = reduceRows.find(r => r.id === id);
     if (!row) return;
     const val = document.getElementById('rp-' + id).value;
-    if (val === '' || val === null) {
-      row.lastEdited = null;
-    } else {
-      row.lastEdited = 'price';
-      // 清空比例字段（让它由价格推算）
+    row.lastEdited = (val === '') ? null : 'price';
+    if (val !== '') {
       const ratioEl = document.getElementById('rr-' + id);
-      if (ratioEl && ratioEl.classList.contains('auto-calc') || ratioEl.classList.contains('breakeven-calc')) {
+      if (ratioEl && (ratioEl.classList.contains('auto-calc') || ratioEl.classList.contains('breakeven-calc'))) {
         ratioEl.value = '';
         ratioEl.classList.remove('auto-calc', 'breakeven-calc');
       }
@@ -547,11 +1054,8 @@
     const row = reduceRows.find(r => r.id === id);
     if (!row) return;
     const val = document.getElementById('rr-' + id).value;
-    if (val === '' || val === null) {
-      row.lastEdited = null;
-    } else {
-      row.lastEdited = 'ratio';
-      // 清空价格字段（让它由比例推算）
+    row.lastEdited = (val === '') ? null : 'ratio';
+    if (val !== '') {
       const priceEl = document.getElementById('rp-' + id);
       if (priceEl && (priceEl.classList.contains('auto-calc') || priceEl.classList.contains('breakeven-calc'))) {
         priceEl.value = '';
@@ -561,17 +1065,15 @@
     recomputeAllRows();
   }
 
-  // ─── 核心推算逻辑 ──────────────────────────────────────
+  // ─── Core Recompute ─────────────────────────────
   function recomputeAllRows() {
     const openPrice = parseFloat(document.getElementById('openPrice').value);
     const stopLoss  = parseFloat(document.getElementById('stopLoss').value);
-
     const validBase = !isNaN(openPrice) && !isNaN(stopLoss) && openPrice > 0 && stopLoss > 0;
     const slPoints  = validBase ? Math.abs(openPrice - stopLoss) : null;
+    let cumulativeRemaining = 1.0;
 
-    let cumulativeRemaining = 1.0; // 累计剩余比例（用于计算剩余仓位）
-
-    reduceRows.forEach((row, idx) => {
+    reduceRows.forEach((row) => {
       const id = row.id;
       const priceEl = document.getElementById('rp-' + id);
       const ratioEl = document.getElementById('rr-' + id);
@@ -585,136 +1087,82 @@
       const hasPrice = priceEl.value !== '' && !isNaN(parseFloat(priceEl.value));
       const hasRatio = ratioEl.value !== '' && !isNaN(parseFloat(ratioEl.value));
 
-      // 判断推算模式
-      // 情况1：只有比例 → 推算保本价格
-      // 情况2：只有价格 → 推算对应比例（不保证保本）
-      // 情况3：两者都有 → 直接用，显示实际
-      // 情况4：都没有   → 提示
-
-      const lastEdited = row.lastEdited;
-
       let resolvedPrice = null;
       let resolvedRatio = null;
-      let priceIsAuto = false;
-      let ratioIsAuto = false;
-      let priceIsBreakeven = false;
 
       if (hasPrice && hasRatio) {
-        // 两者都填了手动值，直接使用
         resolvedPrice = parseFloat(priceEl.value);
         resolvedRatio = parseFloat(ratioEl.value);
-
-        priceEl.classList.remove('auto-calc', 'breakeven-calc');
-        ratioEl.classList.remove('auto-calc', 'breakeven-calc');
-        badgeP.textContent = '手动'; badgeP.className = 'auto-badge manual';
-        badgeR.textContent = '手动'; badgeR.className = 'auto-badge manual';
+        priceEl.classList.remove('auto-calc','breakeven-calc');
+        ratioEl.classList.remove('auto-calc','breakeven-calc');
+        badgeP.textContent = '手动'; badgeP.className = 'badge manual';
+        badgeR.textContent = '手动'; badgeR.className = 'badge manual';
         if (hintP) hintP.textContent = '';
         if (hintR) hintR.textContent = '';
 
       } else if (!hasPrice && hasRatio) {
-        // 只填了比例 → 推算保本价格
         resolvedRatio = parseFloat(ratioEl.value);
-        priceIsBreakeven = true;
-        priceIsAuto = true;
-
         if (validBase && resolvedRatio > 0 && resolvedRatio < 100) {
-          // 保本推导：
-          // 锁定利润 = totalPos * cumulativeRemaining * (ratio/100) * priceDiff/openPrice
-          // 剩余止损亏损 = totalPos * cumulativeRemaining * (1-ratio/100) * slPoints/openPrice
-          // 保本条件：锁定利润 >= 剩余止损亏损
-          // => ratio/100 * priceDiff >= (1-ratio/100) * slPoints
-          // => priceDiff >= slPoints * (1-ratio/100) / (ratio/100)
-          // => priceDiff >= slPoints * (100-ratio) / ratio
-          //
-          // 对于多个减持，考虑到前面已经锁定的利润，这里对每次减持单独计算其"自身保本"
-          // 即：这次减持锁定的利润 >= 这次减持后剩余仓位的最大止损亏损
-          // lockedThis = cumulativeRemaining * ratio/100 * priceDiff/openPrice
-          // lossAfter  = cumulativeRemaining * (1-ratio/100) * slPoints/openPrice
-          // 但已经有前面的锁定利润了，更公平的做法是计算全局保本：
-          // 此处对用户友好，每行单独计算"此减持后整体保本"所需价格
-          // 即：已锁定(前几次) + 本次锁定 >= 本次减持后剩余仓位止损亏损
-          // 设本次减持比例 r=ratio/100, 本次之前剩余 R=cumulativeRemaining
-          // 前面已锁定：lockedBefore（需要迭代计算，这里用简化：只看本行保本）
-          // 为直观起见，展示的是"此单次减持自身保本"的价格
-
           const r = resolvedRatio / 100;
-          // priceDiff >= slPoints * (1-r) / r
           const neededDiff = slPoints * (1 - r) / r;
-          if (direction === 'long') {
-            resolvedPrice = openPrice + neededDiff;
-          } else {
-            resolvedPrice = openPrice - neededDiff;
-          }
-
+          resolvedPrice = direction === 'long'
+            ? openPrice + neededDiff
+            : openPrice - neededDiff;
           priceEl.value = resolvedPrice.toFixed(4);
           priceEl.classList.remove('auto-calc');
           priceEl.classList.add('breakeven-calc');
-          badgeP.textContent = '保本价'; badgeP.className = 'auto-badge breakeven';
-          badgeR.textContent = '手动';   badgeR.className = 'auto-badge manual';
-          ratioEl.classList.remove('auto-calc', 'breakeven-calc');
-          if (hintP) { hintP.textContent = `按此比例减持的保本价格`; hintP.className = 'hint breakeven'; }
+          badgeP.textContent = '保本价'; badgeP.className = 'badge breakeven';
+          badgeR.textContent = '手动';   badgeR.className = 'badge manual';
+          ratioEl.classList.remove('auto-calc','breakeven-calc');
+          if (hintP) { hintP.textContent = '以此比例减持的保本价格'; hintP.className = 'field-hint breakeven'; }
           if (hintR) hintR.textContent = '';
         } else {
           priceEl.value = '';
-          priceEl.classList.remove('auto-calc', 'breakeven-calc');
-          if (hintP) { hintP.textContent = validBase ? '请填写有效比例' : '请先填写开仓/止损价'; hintP.className = 'hint'; }
+          priceEl.classList.remove('auto-calc','breakeven-calc');
+          if (hintP) { hintP.textContent = validBase ? '请填写有效比例' : '请先填写开仓/止损价'; hintP.className = 'field-hint'; }
         }
 
       } else if (hasPrice && !hasRatio) {
-        // 只填了价格 → 推算对应比例（不指定保本，但可从保本逻辑反推推荐比例）
         resolvedPrice = parseFloat(priceEl.value);
-        ratioIsAuto = true;
-
         if (validBase && slPoints > 0) {
           const priceDiff = direction === 'long'
             ? resolvedPrice - openPrice
             : openPrice - resolvedPrice;
-
           if (priceDiff > 0) {
-            // 反推：当你在此价格减持多少比例刚好保本
-            // priceDiff * r = slPoints * (1-r)
-            // r * (priceDiff + slPoints) = slPoints
-            // r = slPoints / (priceDiff + slPoints)
             const beRatio = slPoints / (priceDiff + slPoints) * 100;
             resolvedRatio = beRatio;
-
             ratioEl.value = beRatio.toFixed(2);
             ratioEl.classList.remove('breakeven-calc');
             ratioEl.classList.add('auto-calc');
-            badgeR.textContent = '保本比例'; badgeR.className = 'auto-badge computed';
-            badgeP.textContent = '手动';     badgeP.className = 'auto-badge manual';
-            priceEl.classList.remove('auto-calc', 'breakeven-calc');
-            if (hintR) { hintR.textContent = `在此价减持该比例可恰好保本`; hintR.className = 'hint auto'; }
+            badgeR.textContent = '保本比例'; badgeR.className = 'badge computed';
+            badgeP.textContent = '手动';     badgeP.className = 'badge manual';
+            priceEl.classList.remove('auto-calc','breakeven-calc');
+            if (hintR) { hintR.textContent = '在此价格减持该比例可恰好保本'; hintR.className = 'field-hint auto'; }
             if (hintP) hintP.textContent = '';
           } else {
             ratioEl.value = '';
-            ratioEl.classList.remove('auto-calc', 'breakeven-calc');
-            if (hintR) {
-              hintR.textContent = direction === 'long' ? '减持价格须高于开仓价' : '减持价格须低于开仓价';
-              hintR.className = 'hint';
-            }
+            ratioEl.classList.remove('auto-calc','breakeven-calc');
+            if (hintR) { hintR.textContent = direction === 'long' ? '减持价须高于开仓价' : '减持价须低于开仓价'; hintR.className = 'field-hint'; }
           }
         } else {
           ratioEl.value = '';
-          ratioEl.classList.remove('auto-calc', 'breakeven-calc');
-          if (hintR) { hintR.textContent = '请先填写开仓/止损价'; hintR.className = 'hint'; }
+          ratioEl.classList.remove('auto-calc','breakeven-calc');
+          if (hintR) { hintR.textContent = '请先填写开仓/止损价'; hintR.className = 'field-hint'; }
         }
+
       } else {
-        // 都没填
-        priceEl.value = '';
-        ratioEl.value = '';
-        priceEl.classList.remove('auto-calc', 'breakeven-calc');
-        ratioEl.classList.remove('auto-calc', 'breakeven-calc');
-        badgeP.textContent = '手动'; badgeP.className = 'auto-badge manual';
-        badgeR.textContent = '手动'; badgeR.className = 'auto-badge manual';
-        if (hintP) { hintP.textContent = '填价格或比例，另一个自动推算'; hintP.className = 'hint'; }
+        priceEl.value = ''; ratioEl.value = '';
+        priceEl.classList.remove('auto-calc','breakeven-calc');
+        ratioEl.classList.remove('auto-calc','breakeven-calc');
+        badgeP.textContent = '手动'; badgeP.className = 'badge manual';
+        badgeR.textContent = '手动'; badgeR.className = 'badge manual';
+        if (hintP) { hintP.textContent = '填价格或比例，另一个自动推算'; hintP.className = 'field-hint'; }
         if (hintR) hintR.textContent = '';
       }
 
-      // 更新剩余仓位显示
       if (resolvedRatio !== null && resolvedRatio > 0) {
-        const reducedFraction = cumulativeRemaining * resolvedRatio / 100;
-        cumulativeRemaining -= reducedFraction;
+        const reduced = cumulativeRemaining * resolvedRatio / 100;
+        cumulativeRemaining -= reduced;
         if (remEl) remEl.value = (cumulativeRemaining * 100).toFixed(2) + '%';
       } else {
         if (remEl) remEl.value = '—';
@@ -722,59 +1170,44 @@
     });
   }
 
-  // ─── 格式化工具 ────────────────────────────────────────
+  // ─── Formatters ─────────────────────────────────
   function fmtUSD(n) {
     const v = Math.abs(n);
-    let s;
-    if (v < 0.01)  s = n.toFixed(6);
-    else if (v < 1)   s = n.toFixed(4);
-    else if (v < 100) s = n.toFixed(3);
-    else s = n.toFixed(2);
+    let s = v < 0.01 ? n.toFixed(6) : v < 1 ? n.toFixed(4) : v < 100 ? n.toFixed(3) : n.toFixed(2);
     return (n >= 0 ? '+' : '') + s;
   }
 
-  function fmtPct(n) {
-    return (n >= 0 ? '+' : '') + n.toFixed(3) + '%';
-  }
+  function fmtPct(n) { return (n >= 0 ? '+' : '') + n.toFixed(3) + '%'; }
 
   function showError(msg) {
     const el = document.getElementById('error-msg');
     el.textContent = msg;
     el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 4000);
+    setTimeout(() => el.style.display = 'none', 4500);
   }
 
-  // ─── 计算主函数 ────────────────────────────────────────
+  // ─── Calculate ──────────────────────────────────
   function calculate() {
     document.getElementById('result-section').style.display = 'none';
-
     const openPrice = parseFloat(document.getElementById('openPrice').value);
     const stopLoss  = parseFloat(document.getElementById('stopLoss').value);
     const totalPos  = parseFloat(document.getElementById('totalPos').value);
     const symbol    = document.getElementById('symbol').value.trim() || '合约';
 
-    if (isNaN(openPrice) || isNaN(stopLoss) || isNaN(totalPos)) {
-      showError('请填写完整的开仓价格、止损价格和仓位金额！'); return;
-    }
+    if (isNaN(openPrice) || isNaN(stopLoss) || isNaN(totalPos)) { showError('请填写完整的开仓价格、止损价格和仓位金额！'); return; }
     if (totalPos <= 0) { showError('仓位金额必须大于 0！'); return; }
     if (direction === 'long'  && stopLoss >= openPrice) { showError('做多时，止损价必须低于开仓价！'); return; }
     if (direction === 'short' && stopLoss <= openPrice) { showError('做空时，止损价必须高于开仓价！'); return; }
 
-    // 读取减持计划（此时价格/比例都已推算完毕）
     const reduces = [];
     for (let i = 0; i < reduceRows.length; i++) {
       const id = reduceRows[i].id;
       const price = parseFloat(document.getElementById('rp-' + id).value);
       const ratio = parseFloat(document.getElementById('rr-' + id).value);
-
-      if (isNaN(price) || isNaN(ratio)) {
-        showError(`第 ${i+1} 个减持点位的价格或比例不完整，无法计算！`); return;
-      }
-      if (ratio <= 0 || ratio >= 100) {
-        showError(`第 ${i+1} 个减持比例必须在 0~100% 之间！`); return;
-      }
-      if (direction === 'long'  && price <= openPrice) { showError(`第 ${i+1} 个减持价格须高于开仓价（做多）！`); return; }
-      if (direction === 'short' && price >= openPrice) { showError(`第 ${i+1} 个减持价格须低于开仓价（做空）！`); return; }
+      if (isNaN(price) || isNaN(ratio)) { showError(`第 ${i+1} 个减持点位不完整，无法计算！`); return; }
+      if (ratio <= 0 || ratio >= 100)   { showError(`第 ${i+1} 个减持比例须在 0~100% 之间！`); return; }
+      if (direction === 'long'  && price <= openPrice) { showError(`第 ${i+1} 个减持价格须高于开仓价！`); return; }
+      if (direction === 'short' && price >= openPrice) { showError(`第 ${i+1} 个减持价格须低于开仓价！`); return; }
       reduces.push({ price, ratio });
     }
 
@@ -782,91 +1215,31 @@
     const slPct    = slPoints / openPrice * 100;
     const maxLoss  = totalPos * slPct / 100;
 
-    // ── 推演 ──
-    let remaining = 1.0;
-    let lockedPnL = 0;
+    let remaining = 1.0, lockedPnL = 0;
     const events = [];
 
-    events.push({
-      type: 'open',
-      price: openPrice,
-      posRatio: 1.0,
-      posUSD: totalPos,
-      pnl: 0,
-      cumLocked: 0,
-      note: `开仓 ${symbol}，${direction === 'long' ? '做多' : '做空'}`
-    });
+    events.push({ type:'open', price:openPrice, posRatio:1.0, posUSD:totalPos, pnl:0, cumLocked:0 });
 
     for (let i = 0; i < reduces.length; i++) {
       const r = reduces[i];
-      const reducedRatio   = remaining * r.ratio / 100;
-      const priceDiff = direction === 'long'
-        ? (r.price - openPrice)
-        : (openPrice - r.price);
-      const pnlThisReduce = totalPos * reducedRatio * (priceDiff / openPrice);
+      const reducedRatio = remaining * r.ratio / 100;
+      const priceDiff = direction === 'long' ? (r.price - openPrice) : (openPrice - r.price);
+      const pnlThisReduce = totalPos * reducedRatio * priceDiff / openPrice;
       lockedPnL += pnlThisReduce;
       remaining -= reducedRatio;
-
-      events.push({
-        type: 'reduce', idx: i + 1,
-        price: r.price,
-        reduceRatio: r.ratio,
-        reducedPortionRatio: reducedRatio,
-        posRatio: remaining,
-        posUSD: totalPos * remaining,
-        pnlThisReduce,
-        cumLocked: lockedPnL,
-        note: `第 ${i+1} 次减持 ${r.ratio}%`
-      });
+      events.push({ type:'reduce', idx:i+1, price:r.price, reduceRatio:r.ratio, reducedPortionRatio:reducedRatio,
+        posRatio:remaining, posUSD:totalPos*remaining, pnlThisReduce, cumLocked:lockedPnL });
     }
 
     const slPriceDiff   = direction === 'long' ? (stopLoss - openPrice) : (openPrice - stopLoss);
-    const remainPnLAtSL = totalPos * remaining * (slPriceDiff / openPrice);
+    const remainPnLAtSL = totalPos * remaining * slPriceDiff / openPrice;
     const totalPnLWorst = lockedPnL + remainPnLAtSL;
+    events.push({ type:'sl', price:stopLoss, posRatio:0, posUSD:0, pnlAtSL:remainPnLAtSL, cumLocked:lockedPnL, totalPnL:totalPnLWorst });
 
-    events.push({
-      type: 'sl',
-      price: stopLoss,
-      posRatio: 0, posUSD: 0,
-      pnlAtSL: remainPnLAtSL,
-      cumLocked: lockedPnL,
-      totalPnL: totalPnLWorst,
-      note: '剩余仓位触及止损'
-    });
-
-    // ── 保本分析 ──
     const isBreakeven = totalPnLWorst >= -0.0001;
-    const breakevenPrice = direction === 'long'
-      ? openPrice + slPoints
-      : openPrice - slPoints;
+    const breakevenPrice = direction === 'long' ? openPrice + slPoints : openPrice - slPoints;
 
-    let breakevenHTML = '';
-    if (reduces.length > 0) {
-      breakevenHTML = `
-        <div class="breakeven-banner ${isBreakeven ? 'safe' : 'danger'}">
-          <span class="icon">${isBreakeven ? '✅' : '⚠️'}</span>
-          <div>${isBreakeven
-            ? `当前减持计划<strong>可保本</strong>：即使剩余仓位全部触及止损，总体净盈亏为 <strong>${fmtUSD(totalPnLWorst)} $</strong>`
-            : `当前减持计划<strong>无法完全保本</strong>：若剩余仓位触及止损，总体净亏损为 <strong>${fmtUSD(totalPnLWorst)} $</strong>`
-          }</div>
-        </div>
-        <div style="font-size:0.82rem;color:#94a3b8;line-height:2;">
-          <div>📌 <strong>止损幅度：</strong>${slPoints.toFixed(4)} 点（${slPct.toFixed(3)}%），最大止损金额：<strong style="color:#f87171">${fmtUSD(-maxLoss)} $</strong></div>
-          <div>📌 <strong>单次减持保本参考价位：</strong>开仓价 ± 止损幅度 = <strong style="color:#fbbf24">${breakevenPrice.toFixed(4)}</strong></div>
-          <div>📌 <strong>已锁定利润：</strong><span style="color:#22c55e">${fmtUSD(lockedPnL)} $</span>　
-               <strong>剩余仓位止损亏损：</strong><span style="color:#f87171">${fmtUSD(remainPnLAtSL)} $</span></div>
-        </div>
-      `;
-    } else {
-      breakevenHTML = `
-        <div class="breakeven-banner danger">
-          <span class="icon">ℹ️</span>
-          <span>未设置减持计划，若触及止损最大亏损为 <strong>${fmtUSD(-maxLoss)} $</strong></span>
-        </div>
-      `;
-    }
-
-    // ── 渲染 Summary ──
+    // ── Summary ──
     document.getElementById('summary-grid').innerHTML = `
       <div class="stat-box">
         <div class="stat-label">开仓价格</div>
@@ -881,48 +1254,72 @@
         <div class="stat-value loss">${fmtUSD(-maxLoss)} $</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">止损比例</div>
+        <div class="stat-label">止损幅度</div>
         <div class="stat-value warn">${slPct.toFixed(3)}%</div>
       </div>
     `;
 
+    // ── Breakeven ──
+    let breakevenHTML = '';
+    if (reduces.length > 0) {
+      breakevenHTML = `
+        <div class="breakeven-banner ${isBreakeven ? 'safe' : 'danger'}">
+          <span class="icon">${isBreakeven ? '✓' : '!'}</span>
+          <div class="text">${isBreakeven
+            ? `当前计划<strong>可保本</strong>：即使剩余仓位全部触止损，净盈亏为 <strong>${fmtUSD(totalPnLWorst)} $</strong>`
+            : `当前计划<strong>无法完全保本</strong>：若剩余仓位触止损，净亏损为 <strong>${fmtUSD(totalPnLWorst)} $</strong>`
+          }</div>
+        </div>
+        <div class="breakeven-detail">
+          <div>止损幅度 <strong>${slPoints.toFixed(4)} 点（${slPct.toFixed(3)}%）</strong>，最大止损金额 <strong style="color:var(--red)">${fmtUSD(-maxLoss)} $</strong></div>
+          <div>单次减持保本参考价位：开仓价 ± 止损幅度 = <strong style="color:var(--amber)">${breakevenPrice.toFixed(4)}</strong></div>
+          <div>已锁定利润 <strong style="color:var(--green)">${fmtUSD(lockedPnL)} $</strong>　·　剩余仓位止损亏损 <strong style="color:var(--red)">${fmtUSD(remainPnLAtSL)} $</strong></div>
+        </div>
+      `;
+    } else {
+      breakevenHTML = `
+        <div class="breakeven-banner danger">
+          <span class="icon">!</span>
+          <div class="text">未设置减持计划，若触及止损最大亏损为 <strong>${fmtUSD(-maxLoss)} $</strong></div>
+        </div>
+      `;
+    }
     document.getElementById('breakeven-info').innerHTML = breakevenHTML;
 
-    // ── 时间轴 ──
+    // ── Timeline ──
     const tl = document.getElementById('timeline');
     tl.innerHTML = '';
     events.forEach(ev => {
       const item = document.createElement('div');
       item.className = 'tl-item';
-
-      const tagText = { open: '开仓', reduce: `第${ev.idx}次减持`, sl: '触及止损' }[ev.type] || ev.type;
+      const tagText = { open:'开仓', reduce:`第 ${ev.idx} 次减持`, sl:'触及止损' }[ev.type];
       let detailHTML = '';
 
       if (ev.type === 'open') {
         detailHTML = `
           <div class="tl-detail-grid">
-            <div class="tl-detail"><span>仓位金额</span><span>$${totalPos.toFixed(2)}</span></div>
-            <div class="tl-detail"><span>持仓比例</span><span>100%</span></div>
-            <div class="tl-detail"><span>方向</span><span>${direction === 'long' ? '做多 📈' : '做空 📉'}</span></div>
+            <div class="tl-detail"><div class="dl">仓位金额</div><div class="dv">$${totalPos.toFixed(2)}</div></div>
+            <div class="tl-detail"><div class="dl">持仓比例</div><div class="dv">100%</div></div>
+            <div class="tl-detail"><div class="dl">方向</div><div class="dv">${direction === 'long' ? '做多 ▲' : '做空 ▼'}</div></div>
           </div>`;
       } else if (ev.type === 'reduce') {
-        const pnlColor = ev.pnlThisReduce >= 0 ? '#22c55e' : '#f87171';
+        const c = ev.pnlThisReduce >= 0 ? 'var(--green)' : 'var(--red)';
         detailHTML = `
           <div class="tl-detail-grid">
-            <div class="tl-detail"><span>本次减持</span><span>${(ev.reducedPortionRatio * 100).toFixed(2)}% 仓位</span></div>
-            <div class="tl-detail"><span>减持后剩余</span><span style="color:#fbbf24">${(ev.posRatio * 100).toFixed(2)}%（$${ev.posUSD.toFixed(2)}）</span></div>
-            <div class="tl-detail"><span>本次锁定盈亏</span><span style="color:${pnlColor}">${fmtUSD(ev.pnlThisReduce)} $</span></div>
-            <div class="tl-detail"><span>累计已锁定</span><span style="color:${ev.cumLocked >= 0 ? '#22c55e' : '#f87171'}">${fmtUSD(ev.cumLocked)} $</span></div>
-            <div class="tl-detail"><span>价格涨跌</span><span>${fmtPct((ev.price - openPrice) / openPrice * 100)}</span></div>
-            <div class="tl-detail"><span>盈亏点数</span><span>${direction === 'long' ? fmtUSD(ev.price - openPrice) : fmtUSD(openPrice - ev.price)} pts</span></div>
+            <div class="tl-detail"><div class="dl">本次减持</div><div class="dv">${(ev.reducedPortionRatio*100).toFixed(2)}% 仓位</div></div>
+            <div class="tl-detail"><div class="dl">减持后剩余</div><div class="dv" style="color:var(--amber)">${(ev.posRatio*100).toFixed(2)}%（$${ev.posUSD.toFixed(2)}）</div></div>
+            <div class="tl-detail"><div class="dl">本次锁定</div><div class="dv" style="color:${c}">${fmtUSD(ev.pnlThisReduce)} $</div></div>
+            <div class="tl-detail"><div class="dl">累计锁定</div><div class="dv" style="color:${ev.cumLocked>=0?'var(--green)':'var(--red)'}">${fmtUSD(ev.cumLocked)} $</div></div>
+            <div class="tl-detail"><div class="dl">价格变动</div><div class="dv">${fmtPct((ev.price-openPrice)/openPrice*100)}</div></div>
+            <div class="tl-detail"><div class="dl">盈亏点数</div><div class="dv">${direction==='long'?fmtUSD(ev.price-openPrice):fmtUSD(openPrice-ev.price)} pts</div></div>
           </div>`;
       } else if (ev.type === 'sl') {
-        const totalColor = ev.totalPnL >= 0 ? '#22c55e' : '#f87171';
+        const tc = ev.totalPnL >= 0 ? 'var(--green)' : 'var(--red)';
         detailHTML = `
           <div class="tl-detail-grid">
-            <div class="tl-detail"><span>剩余仓位亏损</span><span style="color:#f87171">${fmtUSD(ev.pnlAtSL)} $</span></div>
-            <div class="tl-detail"><span>已锁定利润</span><span style="color:#22c55e">${fmtUSD(ev.cumLocked)} $</span></div>
-            <div class="tl-detail"><span>最终净盈亏</span><span style="color:${totalColor};font-size:1rem;font-weight:800">${fmtUSD(ev.totalPnL)} $</span></div>
+            <div class="tl-detail"><div class="dl">剩余仓位亏损</div><div class="dv" style="color:var(--red)">${fmtUSD(ev.pnlAtSL)} $</div></div>
+            <div class="tl-detail"><div class="dl">已锁定利润</div><div class="dv" style="color:var(--green)">${fmtUSD(ev.cumLocked)} $</div></div>
+            <div class="tl-detail"><div class="dl">最终净盈亏</div><div class="dv" style="color:${tc};font-family:var(--font-serif);font-size:1.05rem">${fmtUSD(ev.totalPnL)} $</div></div>
           </div>`;
       }
 
@@ -931,14 +1328,14 @@
         <div class="tl-card">
           <div class="tl-header">
             <span class="tl-tag ${ev.type}">${tagText}</span>
-            <span class="tl-price">价格：${parseFloat(ev.price).toFixed(4)}</span>
+            <span class="tl-price">${parseFloat(ev.price).toFixed(4)}</span>
           </div>
           ${detailHTML}
         </div>`;
       tl.appendChild(item);
     });
 
-    // ── 极端场景 ──
+    // ── Scenarios ──
     const bestMovePoints = slPoints * 3;
     const bestPrice = direction === 'long' ? openPrice + bestMovePoints : openPrice - bestMovePoints;
     const remainPnLBest = totalPos * remaining * bestMovePoints / openPrice;
@@ -946,14 +1343,14 @@
 
     document.getElementById('scenario-grid').innerHTML = `
       <div class="scenario-box worst">
-        <div class="scenario-title">😱 最坏情形（剩余仓位全部触及止损）</div>
+        <div class="scenario-title">最坏情形 — 剩余仓位全部触止损</div>
         <div class="scenario-row"><span>各次减持已锁定</span><span>${fmtUSD(lockedPnL)} $</span></div>
         <div class="scenario-row"><span>剩余仓位止损亏损</span><span>${fmtUSD(remainPnLAtSL)} $</span></div>
-        <div class="scenario-row"><span>剩余仓位比例</span><span>${(remaining * 100).toFixed(2)}%</span></div>
+        <div class="scenario-row"><span>剩余仓位比例</span><span>${(remaining*100).toFixed(2)}%</span></div>
         <div class="scenario-row total"><span>最终净盈亏</span><span>${fmtUSD(totalPnLWorst)} $</span></div>
       </div>
       <div class="scenario-box best">
-        <div class="scenario-title">🚀 理想情形（继续运动 ${bestMovePoints.toFixed(2)} 点）</div>
+        <div class="scenario-title">理想情形 — 继续运动 ${bestMovePoints.toFixed(2)} 点</div>
         <div class="scenario-row"><span>各次减持已锁定</span><span>${fmtUSD(lockedPnL)} $</span></div>
         <div class="scenario-row"><span>剩余仓位继续盈利</span><span>${fmtUSD(remainPnLBest)} $</span></div>
         <div class="scenario-row"><span>假设目标价格</span><span>${bestPrice.toFixed(4)}</span></div>
@@ -962,10 +1359,10 @@
     `;
 
     document.getElementById('result-section').style.display = 'block';
-    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('result-section').scrollIntoView({ behavior:'smooth', block:'start' });
   }
 
-  // 初始化一行减持
+  // Init
   addReduceRow();
 </script>
 </body>
