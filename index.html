@@ -862,18 +862,18 @@
       </div>
       <div class="field">
         <label class="field-label">开仓价格</label>
-        <input class="field-input" type="number" id="openPrice" placeholder="如 2230" step="any" oninput="onBaseChange()"/>
+        <input class="field-input" type="number" id="openPrice" placeholder="如 2230" step="any" inputmode="decimal" oninput="onBaseChange()"/>
       </div>
       <div class="field">
         <label class="field-label">止损价格</label>
-        <input class="field-input" type="number" id="stopLoss" placeholder="如 2273" step="any" oninput="onBaseChange()"/>
+        <input class="field-input" type="number" id="stopLoss" placeholder="如 2273" step="any" inputmode="decimal" oninput="onBaseChange()"/>
         <span class="field-hint" id="sl-hint">做空时止损价高于开仓价</span>
       </div>
     </div>
     <div class="grid-2">
       <div class="field">
         <label class="field-label">总仓位金额（$）</label>
-        <input class="field-input" type="number" id="totalPos" placeholder="如 100" step="any" value="100"/>
+        <input class="field-input" type="number" id="totalPos" placeholder="如 100" step="any" inputmode="decimal" value="100"/>
       </div>
       <div class="field">
         <label class="field-label">货币 / 合约名称（可选）</label>
@@ -1012,13 +1012,13 @@
 
         <div class="input-wrap">
           <div class="lbl">价格 <span class="badge manual" id="badge-price-${id}">手动</span></div>
-          <input class="field-input" type="number" id="rp-${id}" placeholder="自动推算" step="any" oninput="onPriceInput(${id})"/>
+          <input class="field-input" type="number" id="rp-${id}" placeholder="自动推算" step="any" inputmode="decimal" oninput="onPriceInput(${id})"/>
           <span class="field-hint" id="hint-price-${id}"></span>
         </div>
 
         <div class="input-wrap">
           <div class="lbl">比例 % <span class="badge manual" id="badge-ratio-${id}">手动</span></div>
-          <input class="field-input" type="number" id="rr-${id}" placeholder="自动推算" min="0.01" max="99.99" step="any" oninput="onRatioInput(${id})"/>
+          <input class="field-input" type="number" id="rr-${id}" placeholder="自动推算" min="0.01" max="99.99" step="any" inputmode="decimal" oninput="onRatioInput(${id})"/>
           <span class="field-hint" id="hint-ratio-${id}"></span>
         </div>
 
