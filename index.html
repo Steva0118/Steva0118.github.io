@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
- <meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>仓位计算</title>
+  <title>期货仓位计算器</title>
 
   <!-- ══ iOS / Android 主屏幕图标 ══ -->
   <!-- iOS：添加到主屏幕时的图标 -->
@@ -907,10 +907,10 @@
 
   <div class="panel">
     <div class="tip-bar">
-      <strong>价格</strong> 与 <strong>减持比例</strong> 只需填写其一，另一个将自动推算：<br>
+      <strong>第 1 个减持点位</strong>支持保本自动推算：只需填写价格或比例之一，另一个将自动计算：<br>
       · 填写 <strong>减持比例</strong> → 自动计算出「保本价格」&nbsp;&nbsp;
       · 填写 <strong>减持价格</strong> → 自动计算出「保本所需最低比例」<br>
-      · 两者均填 → 以手动值为准，计算实际盈亏
+      <strong>第 2 个及以后的减持点位</strong>请手动填写价格和比例
     </div>
 
     <div class="reduce-table-header">
@@ -1017,35 +1017,83 @@
 
   function renderReduceRows() {
     const container = document.getElementById('reduce-list');
+
+    // 保存已有行的输入值，避免重建DOM时丢失
+    const savedValues = {};
+    reduceRows.forEach(row => {
+      const priceEl = document.getElementById('rp-' + row.id);
+      const ratioEl = document.getElementById('rr-' + row.id);
+      savedValues[row.id] = {
+        price: priceEl ? priceEl.value : '',
+        ratio: ratioEl ? ratioEl.value : ''
+      };
+    });
+
     container.innerHTML = '';
     reduceRows.forEach((row, idx) => {
       const id = row.id;
+      const isFirst = (idx === 0);  // 仅第1行支持保本自动推算
       const div = document.createElement('div');
       div.className = 'reduce-row';
       div.id = 'row-' + id;
-      div.innerHTML = `
-        <div class="row-num">${idx + 1}</div>
 
-        <div class="input-wrap">
-          <div class="lbl">价格 <span class="badge manual" id="badge-price-${id}">手动</span></div>
-          <input class="field-input" type="number" id="rp-${id}" placeholder="自动推算" step="any" inputmode="decimal" oninput="onPriceInput(${id})"/>
-          <span class="field-hint" id="hint-price-${id}"></span>
-        </div>
+      if (isFirst) {
+        // 第1行：保留保本自动推算功能
+        div.innerHTML = `
+          <div class="row-num">${idx + 1}</div>
 
-        <div class="input-wrap">
-          <div class="lbl">比例 % <span class="badge manual" id="badge-ratio-${id}">手动</span></div>
-          <input class="field-input" type="number" id="rr-${id}" placeholder="自动推算" min="0.01" max="99.99" step="any" inputmode="decimal" oninput="onRatioInput(${id})"/>
-          <span class="field-hint" id="hint-ratio-${id}"></span>
-        </div>
+          <div class="input-wrap">
+            <div class="lbl">价格 <span class="badge manual" id="badge-price-${id}">手动</span></div>
+            <input class="field-input" type="number" id="rp-${id}" placeholder="自动推算" step="any" inputmode="decimal" oninput="onPriceInput(${id})"/>
+            <span class="field-hint" id="hint-price-${id}"></span>
+          </div>
 
-        <div class="input-wrap">
-          <div class="lbl">减持后剩余</div>
-          <input class="field-input" type="text" id="rem-${id}" placeholder="—" readonly style="cursor:default;color:var(--amber);border-color:var(--gray-200);"/>
-        </div>
+          <div class="input-wrap">
+            <div class="lbl">比例 % <span class="badge manual" id="badge-ratio-${id}">手动</span></div>
+            <input class="field-input" type="number" id="rr-${id}" placeholder="自动推算" min="0.01" max="100" step="any" inputmode="decimal" oninput="onRatioInput(${id})"/>
+            <span class="field-hint" id="hint-ratio-${id}"></span>
+          </div>
 
-        <button class="btn-remove" onclick="removeReduceRow(${id})" title="删除">✕</button>
-      `;
+          <div class="input-wrap">
+            <div class="lbl">减持后剩余</div>
+            <input class="field-input" type="text" id="rem-${id}" placeholder="—" readonly style="cursor:default;color:var(--amber);border-color:var(--gray-200);"/>
+          </div>
+
+          <button class="btn-remove" onclick="removeReduceRow(${id})" title="删除">✕</button>
+        `;
+      } else {
+        // 第2行及以后：纯手动输入，无自动推算
+        div.innerHTML = `
+          <div class="row-num">${idx + 1}</div>
+
+          <div class="input-wrap">
+            <div class="lbl">价格</div>
+            <input class="field-input" type="number" id="rp-${id}" placeholder="请手动填写" step="any" inputmode="decimal" oninput="recomputeAllRows()"/>
+          </div>
+
+          <div class="input-wrap">
+            <div class="lbl">比例 %</div>
+            <input class="field-input" type="number" id="rr-${id}" placeholder="请手动填写" min="0.01" max="100" step="any" inputmode="decimal" oninput="recomputeAllRows()"/>
+          </div>
+
+          <div class="input-wrap">
+            <div class="lbl">减持后剩余</div>
+            <input class="field-input" type="text" id="rem-${id}" placeholder="—" readonly style="cursor:default;color:var(--amber);border-color:var(--gray-200);"/>
+          </div>
+
+          <button class="btn-remove" onclick="removeReduceRow(${id})" title="删除">✕</button>
+        `;
+      }
+
       container.appendChild(div);
+
+      // 恢复已保存的输入值
+      if (savedValues[id]) {
+        const priceEl = document.getElementById('rp-' + id);
+        const ratioEl = document.getElementById('rr-' + id);
+        if (priceEl && savedValues[id].price !== '') priceEl.value = savedValues[id].price;
+        if (ratioEl && savedValues[id].ratio !== '') ratioEl.value = savedValues[id].ratio;
+      }
     });
     recomputeAllRows();
   }
@@ -1089,99 +1137,116 @@
     const slPoints  = validBase ? Math.abs(openPrice - stopLoss) : null;
     let cumulativeRemaining = 1.0;
 
-    reduceRows.forEach((row) => {
+    reduceRows.forEach((row, idx) => {
       const id = row.id;
+      const isFirst = (idx === 0);
       const priceEl = document.getElementById('rp-' + id);
       const ratioEl = document.getElementById('rr-' + id);
       const remEl   = document.getElementById('rem-' + id);
-      const badgeP  = document.getElementById('badge-price-' + id);
-      const badgeR  = document.getElementById('badge-ratio-' + id);
-      const hintP   = document.getElementById('hint-price-' + id);
-      const hintR   = document.getElementById('hint-ratio-' + id);
       if (!priceEl || !ratioEl) return;
 
-      const hasPrice = priceEl.value !== '' && !isNaN(parseFloat(priceEl.value));
-      const hasRatio = ratioEl.value !== '' && !isNaN(parseFloat(ratioEl.value));
+      if (isFirst) {
+        // ── 第1行：保本自动推算逻辑 ──────────────────
+        const badgeP  = document.getElementById('badge-price-' + id);
+        const badgeR  = document.getElementById('badge-ratio-' + id);
+        const hintP   = document.getElementById('hint-price-' + id);
+        const hintR   = document.getElementById('hint-ratio-' + id);
 
-      let resolvedPrice = null;
-      let resolvedRatio = null;
+        const hasPrice = priceEl.value !== '' && !isNaN(parseFloat(priceEl.value));
+        const hasRatio = ratioEl.value !== '' && !isNaN(parseFloat(ratioEl.value));
 
-      if (hasPrice && hasRatio) {
-        resolvedPrice = parseFloat(priceEl.value);
-        resolvedRatio = parseFloat(ratioEl.value);
-        priceEl.classList.remove('auto-calc','breakeven-calc');
-        ratioEl.classList.remove('auto-calc','breakeven-calc');
-        badgeP.textContent = '手动'; badgeP.className = 'badge manual';
-        badgeR.textContent = '手动'; badgeR.className = 'badge manual';
-        if (hintP) hintP.textContent = '';
-        if (hintR) hintR.textContent = '';
+        let resolvedPrice = null;
+        let resolvedRatio = null;
 
-      } else if (!hasPrice && hasRatio) {
-        resolvedRatio = parseFloat(ratioEl.value);
-        if (validBase && resolvedRatio > 0 && resolvedRatio < 100) {
-          const r = resolvedRatio / 100;
-          const neededDiff = slPoints * (1 - r) / r;
-          resolvedPrice = direction === 'long'
-            ? openPrice + neededDiff
-            : openPrice - neededDiff;
-          priceEl.value = resolvedPrice.toFixed(4);
-          priceEl.classList.remove('auto-calc');
-          priceEl.classList.add('breakeven-calc');
-          badgeP.textContent = '保本价'; badgeP.className = 'badge breakeven';
-          badgeR.textContent = '手动';   badgeR.className = 'badge manual';
-          ratioEl.classList.remove('auto-calc','breakeven-calc');
-          if (hintP) { hintP.textContent = '以此比例减持的保本价格'; hintP.className = 'field-hint breakeven'; }
-          if (hintR) hintR.textContent = '';
-        } else {
-          priceEl.value = '';
+        if (hasPrice && hasRatio) {
+          resolvedPrice = parseFloat(priceEl.value);
+          resolvedRatio = parseFloat(ratioEl.value);
           priceEl.classList.remove('auto-calc','breakeven-calc');
-          if (hintP) { hintP.textContent = validBase ? '请填写有效比例' : '请先填写开仓/止损价'; hintP.className = 'field-hint'; }
-        }
+          ratioEl.classList.remove('auto-calc','breakeven-calc');
+          badgeP.textContent = '手动'; badgeP.className = 'badge manual';
+          badgeR.textContent = '手动'; badgeR.className = 'badge manual';
+          if (hintP) hintP.textContent = '';
+          if (hintR) hintR.textContent = '';
 
-      } else if (hasPrice && !hasRatio) {
-        resolvedPrice = parseFloat(priceEl.value);
-        if (validBase && slPoints > 0) {
-          const priceDiff = direction === 'long'
-            ? resolvedPrice - openPrice
-            : openPrice - resolvedPrice;
-          if (priceDiff > 0) {
-            const beRatio = slPoints / (priceDiff + slPoints) * 100;
-            resolvedRatio = beRatio;
-            ratioEl.value = beRatio.toFixed(2);
-            ratioEl.classList.remove('breakeven-calc');
-            ratioEl.classList.add('auto-calc');
-            badgeR.textContent = '保本比例'; badgeR.className = 'badge computed';
-            badgeP.textContent = '手动';     badgeP.className = 'badge manual';
+        } else if (!hasPrice && hasRatio) {
+          resolvedRatio = parseFloat(ratioEl.value);
+          if (validBase && resolvedRatio > 0 && resolvedRatio <= 100) {
+            const r = resolvedRatio / 100;
+            const neededDiff = slPoints * (1 - r) / r;
+            resolvedPrice = direction === 'long'
+              ? openPrice + neededDiff
+              : openPrice - neededDiff;
+            priceEl.value = resolvedPrice.toFixed(4);
+            priceEl.classList.remove('auto-calc');
+            priceEl.classList.add('breakeven-calc');
+            badgeP.textContent = '保本价'; badgeP.className = 'badge breakeven';
+            badgeR.textContent = '手动';   badgeR.className = 'badge manual';
+            ratioEl.classList.remove('auto-calc','breakeven-calc');
+            if (hintP) { hintP.textContent = '以此比例减持的保本价格'; hintP.className = 'field-hint breakeven'; }
+            if (hintR) hintR.textContent = '';
+          } else {
+            priceEl.value = '';
             priceEl.classList.remove('auto-calc','breakeven-calc');
-            if (hintR) { hintR.textContent = '在此价格减持该比例可恰好保本'; hintR.className = 'field-hint auto'; }
-            if (hintP) hintP.textContent = '';
+            if (hintP) { hintP.textContent = validBase ? '请填写有效比例' : '请先填写开仓/止损价'; hintP.className = 'field-hint'; }
+          }
+
+        } else if (hasPrice && !hasRatio) {
+          resolvedPrice = parseFloat(priceEl.value);
+          if (validBase && slPoints > 0) {
+            const priceDiff = direction === 'long'
+              ? resolvedPrice - openPrice
+              : openPrice - resolvedPrice;
+            if (priceDiff > 0) {
+              const beRatio = slPoints / (priceDiff + slPoints) * 100;
+              resolvedRatio = beRatio;
+              ratioEl.value = beRatio.toFixed(2);
+              ratioEl.classList.remove('breakeven-calc');
+              ratioEl.classList.add('auto-calc');
+              badgeR.textContent = '保本比例'; badgeR.className = 'badge computed';
+              badgeP.textContent = '手动';     badgeP.className = 'badge manual';
+              priceEl.classList.remove('auto-calc','breakeven-calc');
+              if (hintR) { hintR.textContent = '在此价格减持该比例可恰好保本'; hintR.className = 'field-hint auto'; }
+              if (hintP) hintP.textContent = '';
+            } else {
+              ratioEl.value = '';
+              ratioEl.classList.remove('auto-calc','breakeven-calc');
+              if (hintR) { hintR.textContent = direction === 'long' ? '减持价须高于开仓价' : '减持价须低于开仓价'; hintR.className = 'field-hint'; }
+            }
           } else {
             ratioEl.value = '';
             ratioEl.classList.remove('auto-calc','breakeven-calc');
-            if (hintR) { hintR.textContent = direction === 'long' ? '减持价须高于开仓价' : '减持价须低于开仓价'; hintR.className = 'field-hint'; }
+            if (hintR) { hintR.textContent = '请先填写开仓/止损价'; hintR.className = 'field-hint'; }
           }
+
         } else {
-          ratioEl.value = '';
+          priceEl.value = ''; ratioEl.value = '';
+          priceEl.classList.remove('auto-calc','breakeven-calc');
           ratioEl.classList.remove('auto-calc','breakeven-calc');
-          if (hintR) { hintR.textContent = '请先填写开仓/止损价'; hintR.className = 'field-hint'; }
+          badgeP.textContent = '手动'; badgeP.className = 'badge manual';
+          badgeR.textContent = '手动'; badgeR.className = 'badge manual';
+          if (hintP) { hintP.textContent = '填价格或比例，另一个自动推算'; hintP.className = 'field-hint'; }
+          if (hintR) hintR.textContent = '';
+        }
+
+        if (resolvedRatio !== null && resolvedRatio > 0) {
+          const reduced = cumulativeRemaining * resolvedRatio / 100;
+          cumulativeRemaining -= reduced;
+          if (remEl) remEl.value = (cumulativeRemaining * 100).toFixed(2) + '%';
+        } else {
+          if (remEl) remEl.value = '—';
         }
 
       } else {
-        priceEl.value = ''; ratioEl.value = '';
-        priceEl.classList.remove('auto-calc','breakeven-calc');
-        ratioEl.classList.remove('auto-calc','breakeven-calc');
-        badgeP.textContent = '手动'; badgeP.className = 'badge manual';
-        badgeR.textContent = '手动'; badgeR.className = 'badge manual';
-        if (hintP) { hintP.textContent = '填价格或比例，另一个自动推算'; hintP.className = 'field-hint'; }
-        if (hintR) hintR.textContent = '';
-      }
-
-      if (resolvedRatio !== null && resolvedRatio > 0) {
-        const reduced = cumulativeRemaining * resolvedRatio / 100;
-        cumulativeRemaining -= reduced;
-        if (remEl) remEl.value = (cumulativeRemaining * 100).toFixed(2) + '%';
-      } else {
-        if (remEl) remEl.value = '—';
+        // ── 第2行及以后：纯手动，只计算剩余仓位 ────
+        const price = parseFloat(priceEl.value);
+        const ratio = parseFloat(ratioEl.value);
+        if (!isNaN(ratio) && ratio > 0) {
+          const reduced = cumulativeRemaining * ratio / 100;
+          cumulativeRemaining -= reduced;
+          if (remEl) remEl.value = (cumulativeRemaining * 100).toFixed(2) + '%';
+        } else {
+          if (remEl) remEl.value = '—';
+        }
       }
     });
   }
@@ -1221,7 +1286,7 @@
       const price = parseFloat(document.getElementById('rp-' + id).value);
       const ratio = parseFloat(document.getElementById('rr-' + id).value);
       if (isNaN(price) || isNaN(ratio)) { showError(`第 ${i+1} 个减持点位不完整，无法计算！`); return; }
-      if (ratio <= 0 || ratio >= 100)   { showError(`第 ${i+1} 个减持比例须在 0~100% 之间！`); return; }
+      if (ratio <= 0 || ratio > 100)   { showError(`第 ${i+1} 个减持比例须在 0~100% 之间！`); return; }
       if (direction === 'long'  && price <= openPrice) { showError(`第 ${i+1} 个减持价格须高于开仓价！`); return; }
       if (direction === 'short' && price >= openPrice) { showError(`第 ${i+1} 个减持价格须低于开仓价！`); return; }
       reduces.push({ price, ratio });
